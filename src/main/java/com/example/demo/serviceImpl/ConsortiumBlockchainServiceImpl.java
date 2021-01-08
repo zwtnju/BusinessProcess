@@ -87,7 +87,7 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
 
     /**
      * 从公有链获取用户信息，判断是否合法用户
-     * @param userId 输入的用户id
+     * @param userId 输入的用户ids
      * @return 返回真实用户是否存在
      */
     private boolean isValidUser(Integer userId) {

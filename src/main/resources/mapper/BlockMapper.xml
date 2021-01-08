@@ -87,7 +87,7 @@
     <insert id="insertTransaction_output" useGeneratedKeys="true" keyProperty="transId" parameterType="Transaction">
          insert into output_transaction (bpId,transId,senderId,receiverId,createTime,tranDescription,isSenderAck,isReceiverAck)
          values
-     (#{bpId},#{transId},#{senderId},#{receiverId},now(),#{tranDescription},true,false)
+     (#{bpId},#{transId},#{senderId},#{receiverId},#{createTime},#{tranDescription},true,false)
      </insert>
 
 

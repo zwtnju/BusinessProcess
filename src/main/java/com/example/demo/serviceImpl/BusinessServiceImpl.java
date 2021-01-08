@@ -12,8 +12,11 @@ import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Type;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+
 
 @Service
 public class BusinessServiceImpl implements BusinessService {
@@ -36,6 +39,7 @@ public class BusinessServiceImpl implements BusinessService {
         tx.setBpId(businessProcesssId);
         tx.setSenderAck(true);
         tx.setTransId(lastTxId + 1);
+        tx.setCreateTime(new Timestamp(System.currentTimeMillis()));
         blockMapper.insertTransaction_output(tx);
         //协作业务流程发起者申请联盟链
         if (tx.getTransId().equals(1)) {
