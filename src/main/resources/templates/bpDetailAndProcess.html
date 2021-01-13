@@ -236,12 +236,13 @@
     })
     ;
 
+    //bpId和transId都需要传，才可以唯一确定一个tx
     function completeTx(transId) {
         console.log(transId)
         $.ajax({
             type: "POST",
             url: "/processTxInCooperation",
-            data: {userId: userId, transId: transId},
+            data: {userId: userId, transId: transId, bpId: bpId},
             dataType: "json",
             success: function (respMsg) {
                 console.log(respMsg)

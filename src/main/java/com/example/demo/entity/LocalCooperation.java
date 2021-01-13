@@ -13,8 +13,6 @@ import java.util.*;
 @Component
 public class LocalCooperation {
 
-
-
     private Map<Integer, ConsortiumBlock> localConsortiumChain;  //保存本地所有的合作信息，Map<协作业务流程的bpId，流程实例>
     private Map<Integer, List<Transaction>> localTxs;  //某个业务流程对应的全部交易信息，Map<bpId，List<Txs>>
     private String address;  //本机ip地址

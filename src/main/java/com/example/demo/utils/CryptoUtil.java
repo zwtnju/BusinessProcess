@@ -82,6 +82,11 @@ public class CryptoUtil {
      * @return 当前交易的哈希值
      */
     public static String calcTxHash(Transaction curTx) {
-        return CryptoUtil.SHA256(curTx.toString());
+        return CryptoUtil.SHA256( "" +
+                curTx.getSenderId() +
+                curTx.getReceiverId() +
+                curTx.getCreateTime() +
+                curTx.getCompleteTime() +
+                curTx.getTranDescription());
     }
 }

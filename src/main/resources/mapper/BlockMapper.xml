@@ -31,22 +31,6 @@
         select * from bpDescription bp where bp.completeTime is not null;
     </select>-->
 
-    <select id="findAllInputTxs" resultType="Transaction">
-        select * from input_transaction;
-    </select>
-
-    <select id="findAllOutputTxs" resultType="Transaction">
-        select * from output_transaction;
-    </select>
-
-    <select id="findTransactionInInputByTranId" resultType="Transaction">
-        select * from input_transaction where transId=#{transId};
-    </select>
-
-    <select id="findTransactionInOutputByTranId" resultType="Transaction">
-        select * from output_transaction where transId=#{transId};
-    </select>
-
     <select id="findAllInputTxsByBPId" resultType="Transaction">
         select * from input_transaction where bpId=#{businessProcessId};
     </select>
@@ -76,6 +60,12 @@
          insert into bpDescription (createTime)
     values
     (now())
+    </insert>
+
+    <insert id="insertBPDescriptionFromOthers" parameterType="BusinessProcess">
+        insert into bpDescription (bpId, createTime)
+        values
+               (#{bpId},#{createTime})
     </insert>
 
     <insert id="insertTransaction_input" parameterType="Transaction">
@@ -142,5 +132,32 @@
         </collection>
 
     </resultMap>
+
+    <select id="findAllInputTxs" resultType="Transaction">
+        select * from input_transaction;
+    </select>
+
+    <select id="findAllOutputTxs" resultType="Transaction">
+        select * from output_transaction;
+    </select>
+
+    <select id="findTxsInOutputByTranId" resultType="Transaction">
+        select * from input_transaction where bpId=#{bpId} and transId=#{transId};
+    </select>
+
+    <select id="findTxsInOutputByPrevTranId" resultType="Transaction">
+        select * from output_transaction where bpId=#{bpId} and transId=#{transId};
+    </select>
+
+    <insert id="insertPrivateOutputTx" parameterType="PrivateTransaction">
+        insert into private_output_transaction (bpId,transId,tranDescription)
+        values
+        (#{bpId},#{transId},#{tranDescription})
+    </insert>
+
+    <select id="findPrivateTxsById" resultType="PrivateTransaction">
+        select * from private_output_transaction where bpId=#{bpId} and transId=#{transId};
+    </select>
+
 
 </mapper>

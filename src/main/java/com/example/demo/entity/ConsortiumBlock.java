@@ -46,6 +46,8 @@ public class ConsortiumBlock {
         this.finishedTxs = new HashMap<>();
         this.uploadData = new HashMap<>();
 
+        //不会存在同一个transId需要多个后继任务的情况
+
         for (Transaction tx : txsList) {
             if (tx.getReceiverId().equals(userId)) {
                 this.inputTxs.put(tx.getTransId(), tx);
@@ -70,6 +72,14 @@ public class ConsortiumBlock {
 
     public void setBpId(int bpId) {
         this.bpId = bpId;
+    }
+
+    public int getLocalUserId() {
+        return localUserId;
+    }
+
+    public void setLocalUserId(int localUserId) {
+        this.localUserId = localUserId;
     }
 
     public Map<Integer, Transaction> getInputTxs() {
@@ -290,5 +300,10 @@ public class ConsortiumBlock {
                 && inputs2Outputs.containsKey(inputTxId)
                 && finishedTxsCount.containsKey(inputTxId)
                 && finishedTxsCount.get(inputTxId).equals(uploadData.get(inputTxId).size());
+
+    }
+
+    public void addFinishedTxsCount(Integer inputTxId) {
+        finishedTxsCount.put(inputTxId, finishedTxsCount.get(inputTxId) + 1);
     }
 }

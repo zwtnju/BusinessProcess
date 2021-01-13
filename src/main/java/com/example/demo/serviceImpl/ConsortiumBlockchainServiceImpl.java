@@ -14,8 +14,10 @@ import com.example.demo.websocket.ConsortiumBPClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 联盟链双向验证算法
@@ -53,7 +55,7 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
     BlockMapper blockMapper;
 
     @Override
-    public boolean downloadPhase(Transaction coopTx) {
+    public boolean downloadPhase(BusinessProcess bp, Transaction coopTx) {
         //向公有链发起状态申请
         Integer bpId = coopTx.getBpId();
         Integer senderId = coopTx.getSenderId();
@@ -73,11 +75,10 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
                 if(receiverAddress == null) {
                     return false;
                 }
-
-
-                consortiumBPClient.init(receiverAddress, applyForCooperation(coopTx));
+                consortiumBPClient.init(receiverAddress, applyForCooperation(bp, coopTx));
                 //TODO: 合作信息保存在本地
-                localCooperation.addCooperation(consortiumBlock);
+//                localCooperation.addCooperation(consortiumBlock);
+                blockMapper.insertTransaction_output(coopTx);
                 System.out.println(JSON.toJSONString(localCooperation));
                 return true;
             }
@@ -111,14 +112,14 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
 //     */
 
     @Override
-    public boolean generatePhase(Transaction coopTx) {
+    public boolean generatePhase(BusinessProcess bp, Transaction preTx, Transaction coopTx) {
         Integer bpId = coopTx.getBpId();
         Integer senderId = coopTx.getSenderId();
         Integer receiverId = coopTx.getReceiverId();
         String tranDescription = coopTx.getTranDescription();
         //前端确认合作或者向后申请其他合作时触发
-        Integer localUserId = localCooperation.getLocalUser().getUserid();
         ConsortiumBlock consortiumBlock = localCooperation.getLocalConsortiumChain().get(bpId);
+        Integer localUserId = consortiumBlock.getLocalUserId();
         //如果是申请和我的合作，需要返回一个确认回复，这里在确认的时候用
         if (localUserId.equals(receiverId)) {
             //添加自己和自己的前置节点，用用户指针将区块连接在一起，每一个区块对应一个用户的业务流程
@@ -134,31 +135,49 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
             //如果是我申请的和别人的合作
             //说明无后续节点，这里做完了直接业务流程就完事了
             if (receiverId.equals(CooperationUtil.FINISH_USER_ID)) {
-                Transaction lastTx = new Transaction(bpId, senderId, receiverId, tranDescription);
+//                Transaction lastTx = new Transaction(bpId, senderId, receiverId, tranDescription);
+//
+//                //需要在本节点的任务完成后触发按键设置最后一个tx为可上传的状态，但是这里简化一下操作，直接变成可上传状态，以作测试之用
+//                lastTx.setTransState(CooperationUtil.CONFIRM_APPLY_STATE);
+//                consortiumBlock.addTx(CooperationUtil.LAST_TX, coopTx.getTransId(), lastTx);
+                //合作信息保存在本地
+                //localCooperation.addCooperation(consortiumBlock);
                 //TODO: 本地节点的事情做完之后发送给前置节点
-                //需要在本节点的任务完成后触发按键设置最后一个tx为可上传的状态，但是这里简化一下操作，直接变成可上传状态，以作测试之用
-                lastTx.setTransState(CooperationUtil.CONFIRM_APPLY_STATE);
-                consortiumBlock.addTx(CooperationUtil.LAST_TX, coopTx.getTransId(), lastTx);
-                //合作信息保存在本地
-                localCooperation.addCooperation(consortiumBlock);
-
-                //通知前置节点
-                handleApplyForUpLoad(JSON.toJSONString(lastTx));
-                return true;
+                //这里直接往前传输数据，之后补上验证工作
+                uploadData(preTx, CryptoUtil.encryptTx(coopTx));
             } else {
-                //向其他节点发起协作申请
-                consortiumBlock.addTx(CooperationUtil.OUTPUT_TX, coopTx.getTransId(), coopTx);
-                //合作信息保存在本地
-                localCooperation.addCooperation(consortiumBlock);
-                if (consortiumBlock.addUser(CooperationUtil.OUTPUT_USER, coopTx.getTransId(), receiverId)
-                        && consortiumBlock.addTx(CooperationUtil.OUTPUT_TX, coopTx.getTransId(), coopTx)) {
-                    String receiverAddress = NetworkUtil.getAddressById(receiverId);
-                    if(receiverAddress == null) {
-                        return false;
-                    }
-                    consortiumBPClient.init(receiverAddress, applyForCooperation(coopTx));
-                    return true;
+//                //向其他节点发起协作申请
+//                consortiumBlock.addTx(CooperationUtil.OUTPUT_TX, coopTx.getTransId(), coopTx);
+//                //合作信息保存在本地
+//                //localCooperation.addCooperation(consortiumBlock);
+//                if (consortiumBlock.addUser(CooperationUtil.OUTPUT_USER, coopTx.getTransId(), receiverId)
+//                        && consortiumBlock.addTx(CooperationUtil.OUTPUT_TX, coopTx.getTransId(), coopTx)) {
+//                    String receiverAddress = NetworkUtil.getAddressById(receiverId);
+//                    if(receiverAddress == null) {
+//                        return false;
+//                    }
+//                    consortiumBPClient.init(receiverAddress, applyForCooperation(bp, coopTx));
+//                    return true;
+//                }
+
+                String receiverAddress = NetworkUtil.getAddressById(receiverId);
+                if(receiverAddress == null) {
+                    return false;
                 }
+                consortiumBPClient.init(receiverAddress, applyForCooperation(bp, coopTx));
+                //判断是否向同一个用户发送了多条相同的内容
+                List<Transaction> nextCoopTxs = blockMapper.findTxsInOutputByTranId(bpId, preTx.getTransId()+1);
+                if (!nextCoopTxs.isEmpty()) {
+                    for (Transaction nextTx : nextCoopTxs) {
+                        if (nextTx.getReceiverId().equals(coopTx.getReceiverId())) {
+                            System.out.println("请勿向同一个用户发送相同内容！");
+                            return false;
+                        }
+                    }
+                }
+                blockMapper.insertTransaction_output(coopTx);
+                System.out.println(JSON.toJSONString(localCooperation));
+                return true;
             }
         }
         System.out.println("交易信息有误！");
@@ -197,10 +216,11 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
     }
 
     @Override
-    public String applyForCooperation(Transaction tx){
+    public String applyForCooperation(BusinessProcess bp, Transaction tx){
         NetworkMsg msg = new NetworkMsg();
+        TransportCoopMsg transportCoopMsg = new TransportCoopMsg(tx, bp);
         msg.setType(BlockchainUtil.APPLY_FOR_COOPERATION);
-        msg.setData(JSON.toJSONString(tx));
+        msg.setData(JSON.toJSONString(transportCoopMsg));
         return JSON.toJSONString(msg);
     }
 
@@ -232,28 +252,45 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
     @Override
     public String uploadData(Transaction preTx, String curEncryptTx) {
         NetworkMsg msg = new NetworkMsg();
+        TransportEncryptMsg transportEncryptMsg = new TransportEncryptMsg(preTx, curEncryptTx);
         msg.setType(BlockchainUtil.UPLOAD_DATA);
-        msg.setData(JSON.toJSONString(preTx)+ "$$" + curEncryptTx);
+        msg.setData(JSON.toJSONString(transportEncryptMsg));
         return JSON.toJSONString(msg);
     }
 
     @Override
     public void handleApplyForCooperation(String bpData) {
         //反序列化得到其它节点传来的协作流程
-        Transaction receivedTx = JSON.parseObject(bpData, Transaction.class);
-        ConsortiumBlock consortiumBlock;
-        if (localCooperation.getLocalConsortiumChain().containsKey(receivedTx.getBpId())) {
-//            localCooperation.getLocalConsortiumChain().get(receivedTx.getBpId()).addTx(CooperationUtil.INPUT_TX, CooperationUtil.USELESS_USER_ID, receivedTx);
-            consortiumBlock = localCooperation.getLocalConsortiumChain().get(receivedTx.getBpId());
-        } else {
-            consortiumBlock = new ConsortiumBlock(receivedTx.getBpId());
-        }
+        TransportCoopMsg receivedCoopRequest = JSON.parseObject(bpData, TransportCoopMsg.class);
+        Transaction receivedTx = receivedCoopRequest.getCoopTx();
+        BusinessProcess bp =  receivedCoopRequest.getCoopBp();
+//        ConsortiumBlock consortiumBlock;
+//        if (localCooperation.getLocalConsortiumChain().containsKey(receivedTx.getBpId())) {
+////            localCooperation.getLocalConsortiumChain().get(receivedTx.getBpId()).addTx(CooperationUtil.INPUT_TX, CooperationUtil.USELESS_USER_ID, receivedTx);
+//            consortiumBlock = localCooperation.getLocalConsortiumChain().get(receivedTx.getBpId());
+//        } else {
+//            consortiumBlock = new ConsortiumBlock(receivedTx.getBpId());
+//        }
         //TODO: 在接收节点前端展示接收到的合作请求，保存在消息队列中
-        //确认合作之后保存在本地
+        //本来应该确认合作之后保存在本地
 //        consortiumBlock.addTx(CooperationUtil.INPUT_TX, CooperationUtil.USELESS_USER_ID, receivedTx);
 //        localCooperation.getLocalConsortiumChain().put(receivedTx.getBpId(), consortiumBlock);
         //这里直接同意保存在本地合作中
-        blockMapper.insertTransaction_input(receivedTx);
+//        try {
+//            BusinessProcess localBp = blockMapper.findBPByBPId(bp.getBpId());
+//        } catch (Exception e) {
+//
+//        }
+        if (!localCooperation.getLocalTxs().containsKey(bp.getBpId())) {
+            blockMapper.insertBPDescriptionFromOthers(bp);
+        } else {
+            Map<Integer, Transaction> localInputs = localCooperation.getLocalConsortiumChain().get(bp.getBpId()).getInputTxs();
+            if (localInputs.containsKey(receivedTx.getTransId()) &&
+                    localInputs.get(receivedTx.getTransId()).getTranDescription().equals(receivedTx.getTranDescription())) {
+                System.out.println("合作消息重复！");
+            }
+            blockMapper.insertTransaction_input(receivedTx);
+        }
     }
 
     @Override
@@ -398,12 +435,10 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
     @Override
     public void handleUploadData(String bpData) {
         //反序列化得到其它节点传来的协作流程
-        //receivedInfo[0]是当前节点传出的后续任务，receivedInfo[1]是当前后续任务的其他后续任务
-        String[] receivedInfo = bpData.split("$$");
-        Transaction receivedOutputTx = JSON.parseObject(receivedInfo[0], Transaction.class);
-
+        TransportEncryptMsg transportEncryptMsg = JSON.parseObject(bpData, TransportEncryptMsg.class);
+        Transaction receivedOutputTx = transportEncryptMsg.getPreTx();
         //获取字符串分割后续的全部字符，即其他的后续合作事件
-        String otherEvents = receivedInfo[1];
+        String otherEvents = transportEncryptMsg.getCurEncryptTx();
 
         ConsortiumBlock localConsortiumBlock = localCooperation.getLocalConsortiumChain().get(receivedOutputTx.getBpId());
 
@@ -411,37 +446,56 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
         //先验证后续节点的正确性
         if (localConsortiumBlock.getOutputTxs().containsKey(receivedOutputTx.getTransId())) {
             Transaction localOutputTx = localConsortiumBlock.getOutputTxs().get(receivedOutputTx.getTransId());
+            localOutputTx.setCompleteTime(receivedOutputTx.getCompleteTime());
             //说明后继节点的任务没有问题
             if (receivedOutputTx.getHash().equals(CryptoUtil.calcTxHash(localOutputTx))) {
                 //本地的后续节点对应的前置节点
-                Integer correspondingInputTxId = localConsortiumBlock.getOutputs2Inputs().get(receivedOutputTx.getTransId());
-                //将数据保存在本地，然后等待其他的后续事件完成的通知
-                List<String> outputTxsData;
-                if (localConsortiumBlock.getUploadData().containsKey(correspondingInputTxId)) {
-                    outputTxsData = localConsortiumBlock.getUploadData().get(correspondingInputTxId);
-                } else {
-                    outputTxsData = new ArrayList<>();
-                }
-                outputTxsData.add(CryptoUtil.encryptTx(receivedOutputTx) + otherEvents);
-                localConsortiumBlock.getUploadData().put(correspondingInputTxId, outputTxsData);
+                //Integer correspondingInputTxId = localConsortiumBlock.getOutputs2Inputs().get(receivedOutputTx.getTransId());
+                //改成直接读取数据库的形式
+                Integer correspondingInputTxId = receivedOutputTx.getTransId() - 1;
 
-                //如果当前前置事件的所有后续事件都完成了，就继续往前传递数据
-                if (localConsortiumBlock.isOver(correspondingInputTxId)) {
-                    //如果当前节点是第一个用户，则将数据上传到公有链
-                    if (correspondingInputTxId.equals(CooperationUtil.FIRST_TX)) {
-                        uploadPhase(localConsortiumBlock);
-                    }
-                    else {
-                        Transaction correspondingInputTx = localConsortiumBlock.getInputTxs().get(correspondingInputTxId);
-                        StringBuilder localEncryptTxs = new StringBuilder();
-                        for (String outputTx : localConsortiumBlock.getUploadData().get(correspondingInputTxId)) {
-                            localEncryptTxs.append("@@").append(outputTx);
-                        }
-                        //如果不是第一个用户，继续往前传递数据
-                        String receiverAddress = NetworkUtil.getAddressById(correspondingInputTx.getSenderId());
-                        consortiumBPClient.init(receiverAddress, uploadData(correspondingInputTx, localEncryptTxs.toString()));
-                    }
-                }
+                //将数据保存在本地，然后等待其他的后续事件完成的通知
+
+//                List<String> outputTxsData;
+//                if (localConsortiumBlock.getUploadData().containsKey(correspondingInputTxId)) {
+//                    outputTxsData = localConsortiumBlock.getUploadData().get(correspondingInputTxId);
+//                } else {
+//                    outputTxsData = new ArrayList<>();
+//                }
+//                outputTxsData.add(CryptoUtil.encryptTx(receivedOutputTx) + otherEvents);
+//                localConsortiumBlock.getUploadData().put(correspondingInputTxId, outputTxsData);
+
+                //这里改成数据库更新
+                PrivateTransaction privateTransaction = new PrivateTransaction(receivedOutputTx.getBpId(),
+                        receivedOutputTx.getTransId(), otherEvents);
+                blockMapper.insertPrivateOutputTx(privateTransaction);
+                blockMapper.updateTransaction_output(receivedOutputTx);
+                localConsortiumBlock.addFinishedTxsCount(correspondingInputTxId);
+
+                //TODO: 依此上传加密数据
+
+//                List<Transaction> correspondingOutputTxs =
+//                        blockMapper.findTxsInOutputByTranId(receivedOutputTx.getBpId(), receivedOutputTx.getTransId());
+//
+//                boolean allOver = true;
+//
+//
+//                if (localConsortiumBlock.isOver(correspondingInputTxId)) {
+//                    //如果当前节点是第一个用户，则将数据上传到公有链
+//                    if (correspondingInputTxId.equals(CooperationUtil.FIRST_TX)) {
+//                        uploadPhase(localConsortiumBlock);
+//                    }
+//                    else {
+//                        Transaction correspondingInputTx = localConsortiumBlock.getInputTxs().get(correspondingInputTxId);
+//                        StringBuilder localEncryptTxs = new StringBuilder();
+//                        for (String outputTx : localConsortiumBlock.getUploadData().get(correspondingInputTxId)) {
+//                            localEncryptTxs.append("@@").append(outputTx);
+//                        }
+//                        //如果不是第一个用户，继续往前传递数据
+//                        String receiverAddress = NetworkUtil.getAddressById(correspondingInputTx.getSenderId());
+//                        consortiumBPClient.init(receiverAddress, uploadData(correspondingInputTx, localEncryptTxs.toString()));
+//                    }
+//                }
             }
         }
     }

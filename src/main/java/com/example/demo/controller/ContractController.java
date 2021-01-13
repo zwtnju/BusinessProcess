@@ -42,12 +42,13 @@ public class ContractController {
             bpId = null;
         }
         try {
-            businessService.creatCooperate(bpId, t, 0);
+            businessService.creatCooperate(bpId, t, preTransId);
             s = "发起合作成功";
         } catch (Exception e) {
             s = "发起合作失败";
             code = 1;
             e.printStackTrace();
+            System.out.println("该用户不存在，请先实名注册！");
         }
         response = new IResponse(code, s);
         return response;
@@ -148,12 +149,12 @@ public class ContractController {
     }
 
     @RequestMapping("/processTxInCooperation")
-    public IResponse processTxInCooperation(@RequestParam Integer userId, @RequestParam Integer transId) {
+    public IResponse processTxInCooperation(@RequestParam Integer userId, @RequestParam Integer transId, @RequestParam Integer bpId) {
         IResponse response;
         String s;
         int code = 0;
         try {
-            businessService.processTxInCooperation(userId, transId);
+            businessService.processTxInCooperation(userId, transId, bpId);
             s = "交易确认成功";
         } catch (Exception e) {
             s = "交易确认失败";

@@ -93,7 +93,7 @@ public class Transaction {
     }
 
     public void setHash() {
-        this.hash = CryptoUtil.SHA256(this.getSenderId() + "" + this.getReceiverId() + this.getCreateTime() + this.getCompleteTime() + this.getTranDescription());
+        this.hash = CryptoUtil.calcTxHash(this);
     }
 
     public Integer getSenderId() {

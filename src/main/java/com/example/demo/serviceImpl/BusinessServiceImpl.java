@@ -5,6 +5,7 @@ import com.example.demo.entity.Transaction;
 import com.example.demo.mapper.BlockMapper;
 import com.example.demo.service.ConsortiumBlockchainService;
 import com.example.demo.service.BusinessService;
+import com.example.demo.utils.CooperationUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,40 +28,31 @@ public class BusinessServiceImpl implements BusinessService {
     ConsortiumBlockchainService consortiumBlockchainService;
 
     @Override
-    public void creatCooperate(Integer bpId, Transaction tx, Integer lastTxId) {
+    public void creatCooperate(Integer bpId, Transaction tx, Integer preTransId) {
         int businessProcesssId;
-        BusinessProcess bp = new BusinessProcess();
+        BusinessProcess bp;
         if (bpId == null) { //需要新建流程
+            bp = new BusinessProcess();
+            //可以尝试生成整数哈希值，一来是防伪，二来是不容易冲突
             blockMapper.insertBPDescription(bp);
             businessProcesssId = bp.getBpId();
         } else {
+            bp = blockMapper.findBPByBPId(bpId);
             businessProcesssId = bpId;
         }
         tx.setBpId(businessProcesssId);
         tx.setSenderAck(true);
-        tx.setTransId(lastTxId + 1);
+        tx.setTransId(preTransId + 1);
         tx.setCreateTime(new Timestamp(System.currentTimeMillis()));
-        blockMapper.insertTransaction_output(tx);
         //协作业务流程发起者申请联盟链
         if (tx.getTransId().equals(1)) {
-            try {
-                if (consortiumBlockchainService.downloadPhase(tx)) {
-                    System.out.println("发起合作成功！");
-                }
-            } catch (Exception e) {
-                System.out.println("该用户不存在，请先实名注册！");
-            }
+            consortiumBlockchainService.downloadPhase(bp, tx);
         } else {
             //协作业务流程响应其他人的任务
-            try {
-                if (consortiumBlockchainService.generatePhase(tx)) {
-                    System.out.println("发起合作成功！");
-                }
-            } catch (Exception e) {
-                System.out.println("该用户不存在，请先实名注册！");
-            }
+            Transaction preTx = blockMapper.findTransactionInInputByTranId(bpId, preTransId);
+            consortiumBlockchainService.generatePhase(bp, preTx, tx);
+            System.out.println("发起合作成功！");
         }
-
     }
 
     /*@Override
@@ -111,30 +103,58 @@ public class BusinessServiceImpl implements BusinessService {
     }
 
     @Override
-    public void processTxInCooperation(Integer userId, int transId) {
-        //只处理自己接受的任务，意味着这笔tx也完成了，不需要再判断sender了
-        Transaction t = blockMapper.findTransactionInInputByTranId(transId);
-        t.setReceiverAck(true);
-        Timestamp comTime = new Timestamp(System.currentTimeMillis());
-        t.setCompleteTime(comTime);
-        t.setHash();
-        blockMapper.updateTransaction_input(t);
-
+    public void processTxInCooperation(Integer userId, int transId, int bpId) {
         //通过看所有接收者是否都ack 判断流程是否结束
-        int bpId = t.getBpId();
+//        int bpId = t.getBpId();
         BusinessProcess bp = blockMapper.findBPByBPId(bpId);
         boolean allOver = true;
         //TODO: 这里需要查所有的tx，而不是只有本地的
-        for (Transaction transaction : bp.getTxList()) {
-            if (!transaction.getReceiverAck()) {
-                allOver = false;
-                break;
+
+        List<Transaction> nextTxs = blockMapper.findTxsInOutputByTranId(bpId, transId + 1);
+        //如果没有后继节点
+        if (!nextTxs.isEmpty()) {
+            //如果有后继节点没有完成，则返回错误
+            for (Transaction tx : nextTxs) {
+                if (!tx.getReceiverAck()) {
+                    allOver = false;
+                    System.out.println("还有后续任务没有完成！");
+                    break;
+                }
             }
         }
+
+        //如果全部后继任务都完成了或没有后继任务则返回确认
         if (allOver) {
-            Timestamp comTime2 = new Timestamp(System.currentTimeMillis());
-            bp.setCompleteTime(comTime2);
-            blockMapper.updateBP(bp);
+            //只处理自己接受的任务，意味着这笔tx也完成了，不需要再判断sender了
+            Transaction t = blockMapper.findTransactionInInputByTranId(bpId, transId);
+            t.setReceiverAck(true);
+            Timestamp comTime = new Timestamp(System.currentTimeMillis());
+            t.setCompleteTime(comTime);
+            t.setHash();
+            blockMapper.updateTransaction_input(t);
+
+            //通知之前的节点该任务已完成
+            Transaction tempTx = new Transaction();
+            tempTx.setBpId(t.getBpId());
+            tempTx.setSenderId(t.getReceiverId());
+            tempTx.setReceiverId(CooperationUtil.FINISH_USER_ID);
+            consortiumBlockchainService.generatePhase(bp, t, tempTx);
+
+            if (transId == 0) {
+                //说明是第一个用户发布的，此时整个bp都完成了，第一轮的迭代完成
+                bp.setCompleteTime(comTime);
+                blockMapper.updateBP(bp);
+                System.out.println("该BP已经完成！");
+
+                //向后通知传送数据
+            }
         }
+//        for (Transaction transaction : bp.getTxList()) {
+//            if (!transaction.getReceiverAck()) {
+//                allOver = false;
+//                break;
+//            }
+//        }
+
     }
 }
