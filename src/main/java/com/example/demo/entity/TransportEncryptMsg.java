@@ -5,11 +5,13 @@ package com.example.demo.entity;
  */
 public class TransportEncryptMsg {
     private Transaction preTx;
-    private String curEncryptTx;
+//    private String curEncryptTx;
+    private String otherEncryptTxs;
 
-    public TransportEncryptMsg(Transaction preTx, String curEncryptTx) {
+    public TransportEncryptMsg(Transaction preTx, String otherEncryptTxs) {
         this.preTx = preTx;
-        this.curEncryptTx = curEncryptTx;
+//        this.curEncryptTx = curEncryptTx;
+        this.otherEncryptTxs = otherEncryptTxs;
     }
 
     public Transaction getPreTx() {
@@ -19,12 +21,20 @@ public class TransportEncryptMsg {
     public void setPreTx(Transaction preTx) {
         this.preTx = preTx;
     }
+//
+//    public String getCurEncryptTx() {
+//        return curEncryptTx;
+//    }
+//
+//    public void setCurEncryptTx(String curEncryptTx) {
+//        this.curEncryptTx = curEncryptTx;
+//    }
 
-    public String getCurEncryptTx() {
-        return curEncryptTx;
+    public String getOtherEncryptTxs() {
+        return otherEncryptTxs;
     }
 
-    public void setCurEncryptTx(String curEncryptTx) {
-        this.curEncryptTx = curEncryptTx;
+    public void setOtherEncryptTxs(String otherEncryptTxs) {
+        this.otherEncryptTxs = otherEncryptTxs;
     }
 }

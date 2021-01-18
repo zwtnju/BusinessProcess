@@ -303,6 +303,10 @@ public class ConsortiumBlock {
 
     }
 
+    /**
+     * 临时方法，用来记录完成的后续交易的数量
+     * @param inputTxId
+     */
     public void addFinishedTxsCount(Integer inputTxId) {
         finishedTxsCount.put(inputTxId, finishedTxsCount.get(inputTxId) + 1);
     }

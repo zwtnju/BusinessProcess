@@ -141,23 +141,22 @@
         select * from output_transaction;
     </select>
 
-    <select id="findTxsInOutputByTranId" resultType="Transaction">
+    <select id="findTransactionInInputByTranId" resultType="Transaction">
         select * from input_transaction where bpId=#{bpId} and transId=#{transId};
     </select>
 
-    <select id="findTxsInOutputByPrevTranId" resultType="Transaction">
+    <select id="findTxsInOutputByTranId" resultType="Transaction">
         select * from output_transaction where bpId=#{bpId} and transId=#{transId};
     </select>
 
     <insert id="insertPrivateOutputTx" parameterType="PrivateTransaction">
-        insert into private_output_transaction (bpId,transId,tranDescription)
+        insert into private_output_transaction (bpId,transId,privateDescription)
         values
-        (#{bpId},#{transId},#{tranDescription})
+        (#{bpId},#{transId},#{privateDescription})
     </insert>
 
     <select id="findPrivateTxsById" resultType="PrivateTransaction">
         select * from private_output_transaction where bpId=#{bpId} and transId=#{transId};
     </select>
-
 
 </mapper>

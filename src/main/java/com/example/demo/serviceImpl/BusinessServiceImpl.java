@@ -126,26 +126,21 @@ public class BusinessServiceImpl implements BusinessService {
         //如果全部后继任务都完成了或没有后继任务则返回确认
         if (allOver) {
             //只处理自己接受的任务，意味着这笔tx也完成了，不需要再判断sender了
-            Transaction t = blockMapper.findTransactionInInputByTranId(bpId, transId);
-            t.setReceiverAck(true);
+            Transaction preTx = blockMapper.findTransactionInInputByTranId(bpId, transId);
+            preTx.setReceiverAck(true);
             Timestamp comTime = new Timestamp(System.currentTimeMillis());
-            t.setCompleteTime(comTime);
-            t.setHash();
-            blockMapper.updateTransaction_input(t);
+            preTx.setCompleteTime(comTime);
+            preTx.setHash();
 
-            //通知之前的节点该任务已完成
-            Transaction tempTx = new Transaction();
-            tempTx.setBpId(t.getBpId());
-            tempTx.setSenderId(t.getReceiverId());
-            tempTx.setReceiverId(CooperationUtil.FINISH_USER_ID);
-            consortiumBlockchainService.generatePhase(bp, t, tempTx);
+            //利用后继节点是否为空判断是否有后继节点
+            boolean isLastTx = nextTxs.isEmpty();
+            consortiumBlockchainService.uploadPhase(bp, preTx, isLastTx);
 
             if (transId == 0) {
-                //说明是第一个用户发布的，此时整个bp都完成了，第一轮的迭代完成
+                //说明是第一个用户发布的，此时整个bp都完成了
                 bp.setCompleteTime(comTime);
                 blockMapper.updateBP(bp);
                 System.out.println("该BP已经完成！");
-
                 //向后通知传送数据
             }
         }

@@ -33,7 +33,7 @@ public class BlockchainUtil {
     public final static int CONFIRM_FOR_UPLOAD = 8;
 
     //从后往前上传数据
-    public final static int UPLOAD_DATA = 8;
+    public final static int UPLOAD_DATA = 9;
 
     //区块链种子节点
     public final static String SEED_NODE1 = "ws://172.19.187.200:7005";

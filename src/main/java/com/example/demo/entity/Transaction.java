@@ -68,6 +68,11 @@ public class Transaction {
     public Transaction() {
     }
 
+    //第一个交易实例
+    public Transaction(Integer bpId, Integer transId, Integer senderId, Integer receiverId, String tranDescription, Timestamp createTime, Timestamp completeTime) {
+        this.bpId = bpId;
+    }
+
     public Integer getBpId() {
         return bpId;
     }

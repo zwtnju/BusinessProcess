@@ -120,6 +120,15 @@ public class WebSocketServiceImpl implements WebSocketService, ApplicationRunner
                             " 发往 " +  webSocket.getLocalSocketAddress().getAddress().toString() +" 的同意上传请求");
                     consortiumBlockchainService.handleConfirmForUpLoad(networkMsg.getData());
                     break;
+                case BlockchainUtil.UPLOAD_DATA:
+                    //从后往前上传数据请求：9
+                    System.out.println("接收到用户 " + webSocket.getRemoteSocketAddress().getAddress().toString() +
+                            " 发往 " +  webSocket.getLocalSocketAddress().getAddress().toString() +" 的上传数据请求");
+                    consortiumBlockchainService.handleUploadData(networkMsg.getData());
+                    break;
+                default:
+                    System.out.println("请求错误，无效的请求： " + networkMsg.getType());
+                    break;
             }
         } catch (Exception e) {
             System.out.println("处理IP地址为：" +webSocket.getRemoteSocketAddress().getAddress().toString()
