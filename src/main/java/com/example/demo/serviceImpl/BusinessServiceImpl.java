@@ -1,6 +1,8 @@
 package com.example.demo.serviceImpl;
 
 import com.example.demo.entity.BusinessProcess;
+import com.example.demo.entity.LocalPublicBlockchain;
+import com.example.demo.entity.PrivateTransaction;
 import com.example.demo.entity.Transaction;
 import com.example.demo.mapper.BlockMapper;
 import com.example.demo.service.ConsortiumBlockchainService;
@@ -27,6 +29,9 @@ public class BusinessServiceImpl implements BusinessService {
     @Autowired
     ConsortiumBlockchainService consortiumBlockchainService;
 
+    @Autowired
+    LocalPublicBlockchain localPublicBlockchain;
+
     @Override
     public void creatCooperate(Integer bpId, Transaction tx, Integer preTransId) {
         int businessProcesssId;
@@ -34,6 +39,7 @@ public class BusinessServiceImpl implements BusinessService {
         if (bpId == null) { //需要新建流程
             bp = new BusinessProcess();
             //可以尝试生成整数哈希值，一来是防伪，二来是不容易冲突
+            bp.setCreateTime(new Timestamp(System.currentTimeMillis()));
             blockMapper.insertBPDescription(bp);
             businessProcesssId = bp.getBpId();
         } else {
@@ -93,8 +99,6 @@ public class BusinessServiceImpl implements BusinessService {
 //                if(consortiumBlockchainService.generatePhase()){
 //
 //                }
-
-
         }
         businessProcess.setAckUsers(gson.toJson(userIdlist));
         blockMapper.updateBP(businessProcess);
@@ -108,7 +112,6 @@ public class BusinessServiceImpl implements BusinessService {
 //        int bpId = t.getBpId();
         BusinessProcess bp = blockMapper.findBPByBPId(bpId);
         boolean allOver = true;
-        //TODO: 这里需要查所有的tx，而不是只有本地的
 
         List<Transaction> nextTxs = blockMapper.findTxsInOutputByTranId(bpId, transId + 1);
         //如果没有后继节点
@@ -142,6 +145,12 @@ public class BusinessServiceImpl implements BusinessService {
                 blockMapper.updateBP(bp);
                 System.out.println("该BP已经完成！");
                 //向后通知传送数据
+                blockMapper.updateTransaction_input(preTx);
+
+                List<PrivateTransaction> privateTransactions = blockMapper.findPrivateTxsById
+                        (preTx.getBpId(), preTx.getTransId() + 1);
+//                localPublicBlockchain.addTxCache();
+
             }
         }
 //        for (Transaction transaction : bp.getTxList()) {

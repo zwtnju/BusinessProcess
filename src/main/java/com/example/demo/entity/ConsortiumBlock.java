@@ -51,8 +51,7 @@ public class ConsortiumBlock {
         for (Transaction tx : txsList) {
             if (tx.getReceiverId().equals(userId)) {
                 this.inputTxs.put(tx.getTransId(), tx);
-            }
-            if (tx.getSenderId().equals(userId)) {
+            } else if (tx.getSenderId().equals(userId)) {
                 this.outputTxs.put(tx.getTransId(), tx);
             }
         }

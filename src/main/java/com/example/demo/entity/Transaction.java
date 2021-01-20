@@ -71,6 +71,12 @@ public class Transaction {
     //第一个交易实例
     public Transaction(Integer bpId, Integer transId, Integer senderId, Integer receiverId, String tranDescription, Timestamp createTime, Timestamp completeTime) {
         this.bpId = bpId;
+        this.transId = transId;
+        this.senderId = senderId;
+        this.receiverId = receiverId;
+        this.tranDescription = tranDescription;
+        this.createTime = createTime;
+        this.completeTime = completeTime;
     }
 
     public Integer getBpId() {

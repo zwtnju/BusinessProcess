@@ -59,7 +59,7 @@
     <insert id="insertBPDescription" useGeneratedKeys="true" keyProperty="bpId">
          insert into bpDescription (createTime)
     values
-    (now())
+    (#{createTime})
     </insert>
 
     <insert id="insertBPDescriptionFromOthers" parameterType="BusinessProcess">

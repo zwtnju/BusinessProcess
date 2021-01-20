@@ -17,6 +17,9 @@ public class CooperationUtil {
     //标志无后续合作用户
     public final static int FINISH_USER_ID = -1;
 
+    //标志第一个任务的虚拟发出用户
+    public final static int FIRST_USER_ID = 0;
+
     //标志第一个合作
     public final static int FIRST_TX = 0;
     //标志无后续合作

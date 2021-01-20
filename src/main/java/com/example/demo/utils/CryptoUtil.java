@@ -59,7 +59,10 @@ public class CryptoUtil {
      * @return 加密后的交易
      */
     public static String encryptTx(Transaction tx) {
-        return tx.getSenderId() + tx.getTranDescription() + tx.getCreateTime() + tx.getReceiverId();
+        return "sender: " + tx.getSenderId() +
+                "receiver: " + tx.getReceiverId() +
+                "create time: " + tx.getCreateTime() +
+                "description: " + tx.getTranDescription();
     }
 
     /**

@@ -68,7 +68,7 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
 //            Transaction coopTx = new Transaction(bpId, senderId, receiverId, tranDescription);
 //            coopTx.setTransId(1);
             Timestamp createTime = new Timestamp(System.currentTimeMillis());
-            Transaction firstTx = new Transaction(bpId, CooperationUtil.FIRST_TX, null, senderId,
+            Transaction firstTx = new Transaction(bpId, CooperationUtil.FIRST_TX, CooperationUtil.FIRST_USER_ID, senderId,
                     "流程实例" + bpId + "开始", createTime, createTime);
             firstTx.setHash();
             coopTx.setPreHash(firstTx.getHash());
@@ -314,8 +314,8 @@ public class ConsortiumBlockchainServiceImpl implements ConsortiumBlockchainServ
                     localInputs.get(receivedTx.getTransId()).getTranDescription().equals(receivedTx.getTranDescription())) {
                 System.out.println("合作消息重复！");
             }
-            blockMapper.insertTransaction_input(receivedTx);
         }
+        blockMapper.insertTransaction_input(receivedTx);
     }
 
     @Override
